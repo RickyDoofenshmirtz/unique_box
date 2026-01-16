@@ -2,6 +2,7 @@
 
 #include "box_ref.hpp"
 
+#include <concepts>
 #include <memory>
 #include <new>
 #include <optional>
@@ -16,6 +17,9 @@ public:
     using value_type = T;
 
     template <typename... Args>
+        requires(
+            std::constructible_from<value_type, Args...> &&
+            std::is_nothrow_constructible_v<value_type, Args...>)
     static auto construct(Args&&... args) noexcept -> unique_box
     {
         auto* ptr      = ::operator new(sizeof(value_type));
@@ -25,6 +29,7 @@ public:
     }
 
     template <typename... Args>
+        requires(std::constructible_from<value_type, Args...>)
     static auto try_construct(Args&&... args) noexcept -> std::optional<unique_box>
     {
         auto* ptr = ::operator new(sizeof(value_type), std::nothrow);
