@@ -1,15 +1,20 @@
-#include "header/box_ref.hpp"
-#include "header/unique_box.hpp"
-
-#include <print>
+#include "linked_list.hpp"
 
 namespace {
-    void print_data(box_ref<const int> obj) { std::print("{}", *obj); }
+    void test_list() noexcept
+    {
+        auto l = list<int>::construct();
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        l.push_back(4);
+        l.push_back(5);
+        l.print();
+    }
 }
 
 int main()
 {
-    auto x = unique_box<int>::construct(5);
-    print_data(x.as_ref());
+    test_list();
     return 0;
 }
