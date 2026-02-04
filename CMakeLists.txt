@@ -20,8 +20,6 @@ endif()
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 add_executable(unique_box ${SRC_FILES})
 
-target_include_directories(unique_box PRIVATE "D:/CODE/C++/lib/generic_error")
-
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(unique_box PRIVATE stdc++exp)
     message(STATUS "using g++, linking stdc++exp")

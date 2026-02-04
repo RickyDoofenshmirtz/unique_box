@@ -21,13 +21,6 @@ public:
 
     template <typename U>
         requires(std::is_convertible_v<U*, T*>)
-    box_ref(box_ref<U>& src) noexcept
-        : m_data_ptr(src.get())
-    {
-    }
-
-    template <typename U>
-        requires(std::is_convertible_v<U*, T*>)
     box_ref(const box_ref<U>& src) noexcept
         : m_data_ptr(src.get())
     {

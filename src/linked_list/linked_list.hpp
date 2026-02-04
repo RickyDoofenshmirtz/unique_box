@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header/unique_box.hpp"
+#include "../headers/unique_box.hpp"
 
 #include <optional>
 #include <print>
@@ -27,8 +27,7 @@ public:
 
     void push_back(value_type data)
     {
-        if (!m_head)
-        {
+        if (!m_head) {
             m_head = unique_box<node_type>::construct(data);
             return;
         }
@@ -40,7 +39,7 @@ public:
     void print() const
     {
         auto curr = m_head->as_ref();
-        while (curr)
+        while (curr) //
         {
             std::print("{} ", curr->data);
             if (!curr->next) { break; }

@@ -1,4 +1,9 @@
-#include "linked_list.hpp"
+#include "headers/unique_box.hpp"
+#include "linked_list/linked_list.hpp"
+
+#include <print>
+#include <string>
+#include <utility>
 
 namespace {
     void test_list() noexcept
@@ -11,10 +16,19 @@ namespace {
         l.push_back(5);
         l.print();
     }
+
+    void test_box() noexcept
+    {
+        auto data_ = unique_box<std::string>::try_construct("meow");
+        if (!data_) { return; }
+        auto data = std::move(*data_);
+        std::println("{}", *data);
+    }
 }
 
 int main()
 {
+    test_box();
     test_list();
     return 0;
 }
