@@ -1,6 +1,6 @@
 #pragma once
 
-#include "box_ref.hpp"
+#include "handle_ref.hpp"
 
 #include <cassert>
 #include <concepts>
