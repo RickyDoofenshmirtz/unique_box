@@ -19,7 +19,7 @@ namespace {
 
     void test_box() noexcept
     {
-        auto data_ = unique_box<std::string>::try_construct("meow");
+        auto data_ = unique_handle<std::string>::try_construct("meow");
         if (!data_) { return; }
         auto data = std::move(*data_);
         std::println("{}", *data);

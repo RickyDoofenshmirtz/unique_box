@@ -9,7 +9,7 @@ template <typename T>
 struct node
 {
     T data;
-    std::optional<unique_box<node>> next;
+    std::optional<unique_handle<node>> next;
     explicit node(T data) noexcept
         : data(data)
     {
@@ -28,12 +28,12 @@ public:
     void push_back(value_type data)
     {
         if (!m_head) {
-            m_head = unique_box<node_type>::construct(data);
+            m_head = unique_handle<node_type>::construct(data);
             return;
         }
         auto curr = m_head->as_ref();
         while (curr->next) { curr = curr->next->as_ref(); }
-        curr->next = unique_box<node_type>::construct(data);
+        curr->next = unique_handle<node_type>::construct(data);
     }
 
     void print() const
@@ -51,5 +51,5 @@ public:
 private:
     explicit list() = default;
 
-    std::optional<unique_box<node_type>> m_head;
+    std::optional<unique_handle<node_type>> m_head;
 };
