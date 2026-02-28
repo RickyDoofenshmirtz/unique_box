@@ -20,6 +20,11 @@ public:
     using ref_type       = handle_ref<value_type>;
     using const_ref_type = handle_ref<const value_type>;
 
+    /**
+     * @brief performs safe construction, blocks if construction may throw
+     *
+     * @tparam raw material for value_type
+     */
     template <typename... Args>
         requires(
             std::is_nothrow_constructible_v<value_type, Args...> &&
@@ -33,6 +38,12 @@ public:
         return unique_handle{ data_ptr };
     }
 
+    /**
+     * @brief tries construction, return empty optional if construction throws or allocation fails
+     * @remark safe construction
+     *
+     * @tparam raw material for value_type
+     */
     template <typename... Args>
         requires(
             std::constructible_from<value_type, Args...> &&
@@ -48,6 +59,29 @@ public:
         } catch (...) {
             ::operator delete(ptr);
             return {};
+        }
+    }
+
+    /**
+     * @brief attempts construction regardless of unsafety, calls std::terminate if anything goes
+     * wrong
+     *
+     * @tparam raw material for value_type
+     */
+    template <typename... Args>
+        requires(
+            std::constructible_from<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    static auto force_construct(Args&&... args) noexcept -> unique_handle
+    {
+        value_type* data_ptr{};
+        try {
+            auto* data_ptr = static_cast<value_type*>(::operator new(sizeof(value_type)));
+            std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
+            return unique_handle{ data_ptr };
+        } catch (...) {
+            ::operator delete(data_ptr);
+            std::terminate();
         }
     }
 
