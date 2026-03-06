@@ -1,36 +1,15 @@
 #include "headers/unique_handle.hpp"
-#include "linked_list/linked_list.hpp"
-
-#include <optional>
-#include <print>
-#include <string>
+#include "headers/unique_pointer.hpp"
 
 namespace {
-    void test_list() noexcept
-    {
-        auto l = list<std::string>::construct();
-        l.emplace_back("1");
-        l.emplace_back("2");
-        l.emplace_back("3");
-        l.emplace_back("4");
-        l.emplace_back("5");
-        l.print();
-        while (auto last = l.pop_back()) { std::print("{} ", *last); }
-        std::println();
-    }
+    void test_nullable_pointer() noexcept { auto ptr = unique_pointer<int>::try_construct(5); }
 
-    void test_box() noexcept
-    {
-        auto data = unique_handle<std::string>::try_construct("meow");
-        if (!data) { return; }
-        std::println("{}", **data);
-    }
+    void test_unique_handle() noexcept { auto data = unique_handle<int>::try_construct(5); }
 }
 
 int main()
 {
-    test_box();
-    test_list();
-    std::println("Success");
+    test_nullable_pointer();
+    test_unique_handle();
     return 0;
 }

@@ -5,10 +5,7 @@
 
 #include <optional>
 #include <print>
-#include <string>
 #include <utility>
-
-using T = std::string;
 
 template <typename T>
 struct node
@@ -39,8 +36,8 @@ struct node
     auto next_node() noexcept -> node& { return *next(); }
     auto next_node() const noexcept -> const node& { return *next(); }
 
-    auto next_as_ref() noexcept -> handle_ref<node> { return m_next->as_ref(); }
-    auto next_as_ref() const noexcept -> handle_ref<const node> { return m_next->as_ref(); }
+    auto next_as_ref() noexcept -> handle_view<node> { return m_next->as_ref(); }
+    auto next_as_ref() const noexcept -> handle_view<const node> { return m_next->as_ref(); }
 
     template <typename... Args>
     void make_next(Args&&... args) noexcept
@@ -67,7 +64,7 @@ public:
     using node_type   = node<value_type>;
     using node_handle = unique_handle<node_type>;
 
-    explicit list() = default;
+    explicit list() noexcept = default;
 
     static auto construct() noexcept -> list { return list{}; }
 
@@ -97,7 +94,7 @@ public:
             auto head = *std::exchange(m_head, std::nullopt);
             return head->data();
         }
-        auto p1 = head().as_ref();
+        auto p1 = head().view();
         auto p2 = head()->next_as_ref();
         while (p2->has_next()) {
             p1 = p2;
@@ -110,7 +107,7 @@ public:
     void print() const noexcept
     {
         if (empty()) { return; }
-        auto curr = m_head->as_ref();
+        auto curr = m_head->view();
         while (curr) //
         {
             std::print("{} ", curr->data());
@@ -121,9 +118,9 @@ public:
     }
 
 private:
-    auto p_get_last() noexcept -> handle_ref<node_type>
+    auto p_get_last() noexcept -> handle_view<node_type>
     {
-        auto curr = m_head->as_ref();
+        auto curr = m_head->view();
         while (curr->has_next()) { curr = curr->next_as_ref(); }
         return curr;
     }

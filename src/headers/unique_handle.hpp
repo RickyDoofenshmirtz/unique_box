@@ -17,8 +17,15 @@ class unique_handle
 {
 public:
     using value_type     = T;
-    using ref_type       = handle_ref<value_type>;
-    using const_ref_type = handle_ref<const value_type>;
+    using ref_type       = handle_view<value_type>;
+    using const_ref_type = handle_view<const value_type>;
+
+    static auto from_raw(value_type* data_ptr) noexcept -> std::optional<unique_handle>
+        requires(std::is_nothrow_destructible_v<value_type>)
+    {
+        if (data_ptr == nullptr) { return std::nullopt; }
+        return std::optional{ unique_handle{ data_ptr } };
+    }
 
     /**
      * @brief performs safe construction, blocks if construction may throw
@@ -55,15 +62,15 @@ public:
         auto* data_ptr = static_cast<value_type*>(ptr);
         try {
             std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
-            return unique_handle{ data_ptr };
+            return std::optional{ unique_handle{ data_ptr } };
         } catch (...) {
             ::operator delete(ptr);
-            return {};
+            return std::nullopt;
         }
     }
 
     /**
-     * @brief attempts construction regardless of unsafety, calls std::terminate if anything goes
+     * @brief attempts construction regardless of safety, calls std::terminate if anything goes
      * wrong
      *
      * @tparam raw material for value_type
@@ -76,7 +83,7 @@ public:
     {
         value_type* data_ptr{};
         try {
-            auto* data_ptr = static_cast<value_type*>(::operator new(sizeof(value_type)));
+            data_ptr = static_cast<value_type*>(::operator new(sizeof(value_type)));
             std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
             return unique_handle{ data_ptr };
         } catch (...) {
@@ -85,7 +92,7 @@ public:
         }
     }
 
-    operator bool() const noexcept { return m_data_ptr != nullptr; }
+    explicit operator bool() const noexcept { return m_data_ptr != nullptr; }
 
     auto ptr() noexcept -> value_type* { return m_data_ptr; }
     auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
@@ -116,8 +123,8 @@ public:
         return m_data_ptr;
     }
 
-    auto as_ref() noexcept -> ref_type { return ref_type{ m_data_ptr }; }
-    auto as_ref() const noexcept -> const_ref_type { return const_ref_type{ m_data_ptr }; }
+    auto view() noexcept -> ref_type { return ref_type{ m_data_ptr }; }
+    auto view() const noexcept -> const_ref_type { return const_ref_type{ m_data_ptr }; }
 
 private:
     explicit unique_handle(value_type* data_ptr) noexcept
@@ -137,6 +144,11 @@ public:
     auto operator=(unique_handle&& src) noexcept -> unique_handle&
     {
         if (this == std::addressof(src)) { return *this; }
+        if (m_data_ptr != nullptr) //
+        {
+            std::destroy_at(m_data_ptr);
+            ::operator delete(m_data_ptr);
+        }
         m_data_ptr = std::exchange(src.m_data_ptr, nullptr);
         return *this;
     }
@@ -146,7 +158,6 @@ public:
         if (m_data_ptr == nullptr) { return; }
         std::destroy_at(m_data_ptr);
         ::operator delete(m_data_ptr);
-        m_data_ptr = nullptr;
     }
 
 private:
