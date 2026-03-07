@@ -1,5 +1,8 @@
 #pragma once
 
+#include "handle_ref.hpp"
+#include "unique_handle.hpp"
+
 #include <cassert>
 #include <concepts>
 #include <exception>
@@ -16,14 +19,6 @@ class unique_pointer
 public:
     using value_type = T;
 
-    static auto default_construct() noexcept -> unique_pointer { return unique_pointer{}; }
-
-    static auto from_raw(value_type* data_ptr) noexcept -> unique_pointer
-        requires(std::is_nothrow_default_constructible_v<value_type>)
-    {
-        return unique_pointer{ data_ptr };
-    }
-
     template <typename... Args>
         requires(
             std::is_nothrow_constructible_v<value_type, Args...> &&
@@ -33,8 +28,18 @@ public:
         auto ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { std::terminate(); }
         auto data_ptr = static_cast<value_type*>(ptr);
-        std::construct_at(data_ptr, std::forward<Args>(args)...);
+        std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
         return unique_pointer{ data_ptr };
+    }
+
+    static auto empty_construct() noexcept -> unique_pointer { return unique_pointer{}; }
+
+    static auto default_construct() noexcept -> unique_pointer
+        requires(
+            std::is_nothrow_default_constructible_v<value_type> &&
+            std::is_nothrow_destructible_v<value_type>)
+    {
+        return construct(value_type{});
     }
 
     template <typename... Args>
@@ -73,22 +78,42 @@ public:
         }
     }
 
-    auto operator*() noexcept -> value_type&
+    static auto from_raw(value_type* data_ptr) noexcept -> unique_pointer
+        requires(std::is_nothrow_default_constructible_v<value_type>)
     {
-        assert(m_data_ptr != nullptr);
-        return *m_data_ptr;
+        return unique_pointer{ data_ptr };
     }
 
-    auto operator*() const noexcept -> const value_type&
+    [[nodiscard]] explicit operator bool() const noexcept { return m_data_ptr != nullptr; }
+
+    auto is_empty() const noexcept -> bool { return m_data_ptr == nullptr; }
+
+    auto has_value() const noexcept -> bool { return !is_empty(); }
+
+    auto ptr() noexcept -> value_type* { return m_data_ptr; }
+    auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
+
+    auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
-        assert(m_data_ptr != nullptr);
-        return *m_data_ptr;
+        assert(self);
+        return (*self.ptr());
     }
 
-    template <typename Self>
-    auto deref(this Self&& self) noexcept -> decltype(auto)
+    auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
-        return (*std::forward<Self>(self));
+        assert(self);
+        return (self.ptr());
+    }
+
+    auto deref(this auto&& self) noexcept -> decltype(auto) { return (*self); }
+
+    auto view(this auto&& self) noexcept { return handle_view{ self.ptr() }; }
+
+    auto release() noexcept -> value_type* { return std::exchange(m_data_ptr, nullptr); }
+
+    auto make_non_nullable() noexcept -> std::optional<unique_handle<value_type>>
+    {
+        return unique_handle<value_type>::from_raw(release());
     }
 
 private:

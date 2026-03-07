@@ -18,13 +18,6 @@ class unique_handle
 public:
     using value_type = T;
 
-    static auto from_raw(value_type* data_ptr) noexcept -> std::optional<unique_handle>
-        requires(std::is_nothrow_destructible_v<value_type>)
-    {
-        if (data_ptr == nullptr) { return std::nullopt; }
-        return std::optional{ unique_handle{ data_ptr } };
-    }
-
     /**
      * @brief performs safe construction, blocks if construction may throw
      *
@@ -41,6 +34,19 @@ public:
         auto data_ptr = static_cast<value_type*>(ptr);
         std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
         return unique_handle{ data_ptr };
+    }
+
+    /**
+     * @brief performs safe construction with default value, blocks if default construction
+     * is not possible or if constuction may throw
+     *
+     */
+    static auto default_construct() noexcept -> unique_handle
+        requires(
+            std::is_nothrow_default_constructible_v<value_type> &&
+            std::is_nothrow_destructible_v<value_type>)
+    {
+        return construct(value_type{});
     }
 
     /**
@@ -91,6 +97,18 @@ public:
         }
     }
 
+    /**
+     * @brief takes the ownership of already constructed data, return empty optional is pointer
+     * passed is a nullptr
+     *
+     */
+    static auto from_raw(value_type* data_ptr) noexcept -> std::optional<unique_handle>
+        requires(std::is_nothrow_destructible_v<value_type>)
+    {
+        if (data_ptr == nullptr) { return std::nullopt; }
+        return std::optional{ unique_handle{ data_ptr } };
+    }
+
     [[nodiscard]] explicit operator bool() const noexcept { return m_data_ptr != nullptr; }
 
     auto ptr() noexcept -> value_type* { return m_data_ptr; }
@@ -103,13 +121,13 @@ public:
 
     auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
-        assert(self.ptr() != nullptr);
+        assert(self);
         return (*self.ptr());
     }
 
     auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
-        assert(self.ptr() != nullptr);
+        assert(self);
         return (self.ptr());
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -32,14 +33,23 @@ public:
     constexpr auto is_empty() const noexcept -> bool { return m_data_ptr == nullptr; }
     constexpr auto has_value() const noexcept -> bool { return !is_empty(); }
 
+    [[nodiscard]] constexpr auto ptr() noexcept -> value_type* { return m_data_ptr; }
+    [[nodiscard]] constexpr auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
+
     [[nodiscard]] constexpr auto get() noexcept -> value_type* { return m_data_ptr; }
     [[nodiscard]] constexpr auto get() const noexcept -> const value_type* { return m_data_ptr; }
 
-    constexpr auto operator*() noexcept -> value_type& { return *m_data_ptr; }
-    constexpr auto operator*() const noexcept -> const value_type& { return *m_data_ptr; }
+    constexpr auto operator*(this auto&& self) noexcept -> decltype(auto)
+    {
+        assert(self);
+        return (*self.ptr());
+    }
 
-    constexpr auto operator->() noexcept -> value_type* { return m_data_ptr; }
-    constexpr auto operator->() const noexcept -> const value_type* { return m_data_ptr; }
+    constexpr auto operator->(this auto&& self) noexcept -> decltype(auto)
+    {
+        assert(self);
+        return (self.ptr());
+    }
 
     constexpr auto reset() noexcept -> value_type* { return reset_to(nullptr); }
 
