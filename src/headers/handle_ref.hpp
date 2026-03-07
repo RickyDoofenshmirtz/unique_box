@@ -51,3 +51,9 @@ public:
 private:
     value_type* m_data_ptr{};
 };
+
+template <typename T>
+handle_view(T&) -> handle_view<T>;
+
+template <typename T>
+handle_view(T*) -> handle_view<T>;

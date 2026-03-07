@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <exception>
 #include <memory>
@@ -52,6 +53,42 @@ public:
             ::operator delete(ptr);
             return std::nullopt;
         }
+    }
+
+    template <typename... Args>
+        requires(
+            std::constructible_from<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    static auto force_construct(Args&&... args) noexcept -> unique_pointer
+    {
+        void* ptr;
+        try {
+            ptr           = ::operator new(sizeof(value_type));
+            auto data_ptr = static_cast<value_type*>(ptr);
+            std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
+            return unique_pointer{ data_ptr };
+        } catch (...) {
+            ::operator delete(ptr);
+            std::terminate();
+        }
+    }
+
+    auto operator*() noexcept -> value_type&
+    {
+        assert(m_data_ptr != nullptr);
+        return *m_data_ptr;
+    }
+
+    auto operator*() const noexcept -> const value_type&
+    {
+        assert(m_data_ptr != nullptr);
+        return *m_data_ptr;
+    }
+
+    template <typename Self>
+    auto deref(this Self&& self) noexcept -> decltype(auto)
+    {
+        return (*std::forward<Self>(self));
     }
 
 private:
