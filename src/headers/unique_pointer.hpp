@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <exception>
 #include <memory>
 #include <new>
 #include <optional>
@@ -17,7 +18,21 @@ public:
     static auto default_construct() noexcept -> unique_pointer { return unique_pointer{}; }
 
     static auto from_raw(value_type* data_ptr) noexcept -> unique_pointer
+        requires(std::is_nothrow_default_constructible_v<value_type>)
     {
+        return unique_pointer{ data_ptr };
+    }
+
+    template <typename... Args>
+        requires(
+            std::is_nothrow_constructible_v<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    static auto construct(Args&&... args) noexcept -> unique_pointer
+    {
+        auto ptr = ::operator new(sizeof(value_type), std::nothrow);
+        if (ptr == nullptr) [[unlikely]] { std::terminate(); }
+        auto data_ptr = static_cast<value_type*>(ptr);
+        std::construct_at(data_ptr, std::forward<Args>(args)...);
         return unique_pointer{ data_ptr };
     }
 

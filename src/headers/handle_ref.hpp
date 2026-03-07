@@ -41,13 +41,11 @@ public:
     constexpr auto operator->() noexcept -> value_type* { return m_data_ptr; }
     constexpr auto operator->() const noexcept -> const value_type* { return m_data_ptr; }
 
-    constexpr void reset() noexcept { m_data_ptr = nullptr; }
-    constexpr void reset_to(value_type* data_ptr) noexcept { m_data_ptr = data_ptr; }
+    constexpr auto reset() noexcept -> value_type* { return reset_to(nullptr); }
 
-    [[nodiscard]]
-    constexpr auto release() noexcept -> value_type*
+    constexpr auto reset_to(value_type* data_ptr) noexcept -> value_type*
     {
-        return std::exchange(m_data_ptr, nullptr);
+        return std::exchange(m_data_ptr, data_ptr);
     }
 
 private:
