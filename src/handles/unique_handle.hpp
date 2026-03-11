@@ -13,8 +13,14 @@
 
 template <typename T>
     requires(std::is_same_v<T, std::remove_cvref_t<T>>)
+class optional_handle;
+
+template <typename T>
+    requires(std::is_same_v<T, std::remove_cvref_t<T>>)
 class unique_handle
 {
+    friend class optional_handle<T>;
+
 public:
     using value_type = T;
 
@@ -172,3 +178,5 @@ public:
 private:
     value_type* m_data_ptr;
 };
+
+#include "optional_handle.hpp"

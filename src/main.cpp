@@ -1,7 +1,9 @@
+#include "handles/optional_handle.hpp"
 #include "handles/unique_handle.hpp"
 #include "handles/unique_pointer.hpp"
 
 #include <print>
+#include <utility>
 
 struct coordinate
 {
@@ -33,10 +35,30 @@ namespace {
         std::println("{}, {}", x, y);
         auto str_data = str_ptr.make_non_nullable().value();
     }
+
+    auto get_optional_handle() noexcept -> optional_handle<coordinate>
+    {
+        auto handle = unique_handle<coordinate>::construct(5, 6);
+        // auto opt_handle = optional_handle<int>::construct(std::move(handle));
+        return optional_handle{ std::move(handle) };
+    }
+
+    [[maybe_unused]]
+    void test_optional_handle() noexcept
+    {
+        auto maybe_handle = get_optional_handle();
+        // auto& handle = maybe_handle.value();
+        // auto& value  = maybe_handle.deref();
+
+        maybe_handle->get_x() = 8;
+        auto [x, y]           = maybe_handle.deref();
+
+        std::println("{}", x);
+    }
 }
 
 int main()
 {
-    test_nullable_pointer();
+    test_optional_handle();
     return 0;
 }
