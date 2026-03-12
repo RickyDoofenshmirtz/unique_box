@@ -21,7 +21,6 @@ public:
     using value_type = T;
 
     explicit optional_handle() noexcept
-        requires(std::is_nothrow_destructible_v<value_type>)
         : m_handle(unique_handle<value_type>{ nullptr })
     {
     }
@@ -78,6 +77,8 @@ public:
 
     [[nodiscard]] explicit operator bool() const noexcept { return m_handle.m_data_ptr != nullptr; }
     [[nodiscard]] auto has_value() const noexcept -> bool { return m_handle.m_data_ptr != nullptr; }
+
+    [[nodiscard]] auto is_empty() const noexcept -> bool { return !has_value(); }
 
     [[nodiscard]]
     auto ptr(this auto&& self) noexcept -> decltype(auto)
