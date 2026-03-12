@@ -85,9 +85,9 @@ public:
         return (self.m_handle.operator->());
     }
 
-    auto handle(this auto&& self) -> decltype(auto) { return (*self); }
+    auto handle(this auto&& self) noexcept -> decltype(auto) { return (*self); }
 
-    auto deref(this auto&& self) -> decltype(auto) { return (**self); }
+    auto deref(this auto&& self) noexcept -> decltype(auto) { return (**self); }
 
     void reset() noexcept { m_handle = unique_handle<value_type>{ nullptr }; }
 

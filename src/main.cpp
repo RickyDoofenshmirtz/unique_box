@@ -52,7 +52,7 @@ namespace {
 
         maybe_handle->get_x() = 8;
         auto [x, y]           = maybe_handle.deref();
-
+        auto hand             = maybe_handle.eject();
         std::println("{}", x);
     }
 }
