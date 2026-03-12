@@ -85,16 +85,16 @@ public:
         return (self.m_handle.operator->());
     }
 
-    auto value(this auto&& self) -> decltype(auto) { return (*self); }
+    auto handle(this auto&& self) -> decltype(auto) { return (*self); }
 
-    auto deref(this auto&& self) -> decltype(auto) { return ((*self).deref()); }
+    auto deref(this auto&& self) -> decltype(auto) { return (**self); }
 
     void reset() noexcept { m_handle = unique_handle<value_type>{ nullptr }; }
 
     [[nodiscard]]
-    auto release() noexcept -> unique_handle<value_type>
+    auto eject() noexcept -> unique_handle<value_type>
     {
-        return std::exchange(m_handle, unique_handle<value_type>{});
+        return std::exchange(m_handle, unique_handle<value_type>{ nullptr });
     }
 
 private:
