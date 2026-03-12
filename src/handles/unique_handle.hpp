@@ -122,9 +122,6 @@ public:
 
     [[nodiscard]] auto cptr() const noexcept -> const value_type* { return m_data_ptr; }
 
-    [[nodiscard]] auto get() noexcept -> value_type* { return m_data_ptr; }
-    [[nodiscard]] auto get() const noexcept -> const value_type* { return m_data_ptr; }
-
     [[nodiscard]]
     auto operator*(this auto&& self) noexcept -> decltype(auto)
     {

@@ -71,6 +71,9 @@ namespace {
         auto res    = handle.try_emplace(8, 9);
         auto [x, y] = (*res).get();
         std::println("{}, {}", x, y);
+        handle.reset();
+        [[maybe_unused]] auto view = handle.view();
+        [[maybe_unused]] auto ptr  = handle.cptr();
     }
 }
 

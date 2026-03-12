@@ -1,5 +1,6 @@
 #pragma once
 
+#include "handle_ref.hpp"
 #include "unique_handle.hpp"
 
 #include <cassert>
@@ -79,6 +80,14 @@ public:
     [[nodiscard]] auto has_value() const noexcept -> bool { return m_handle.m_data_ptr != nullptr; }
 
     [[nodiscard]]
+    auto ptr(this auto&& self) noexcept -> decltype(auto)
+    {
+        return (self.m_handle.ptr());
+    }
+
+    [[nodiscard]] auto cptr() const noexcept -> const value_type* { return m_handle.cptr(); }
+
+    [[nodiscard]]
     auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
@@ -96,13 +105,15 @@ public:
 
     [[nodiscard]] auto deref(this auto&& self) noexcept -> decltype(auto) { return (**self); }
 
-    void reset() noexcept { m_handle = unique_handle<value_type>{ nullptr }; }
+    [[nodiscard]] auto view(this auto&& self) noexcept { return handle_view{ self.ptr() }; }
 
     [[nodiscard]]
     auto eject() noexcept -> unique_handle<value_type>
     {
         return std::exchange(m_handle, unique_handle<value_type>{ nullptr });
     }
+
+    void reset() noexcept { auto _ = eject(); }
 
     template <typename... Args>
         requires(

@@ -28,23 +28,22 @@ public:
     {
     }
 
-    explicit constexpr operator bool() const noexcept { return m_data_ptr != nullptr; }
+    [[nodiscard]] constexpr auto is_empty() const noexcept -> bool { return m_data_ptr == nullptr; }
+    [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return !is_empty(); }
 
-    constexpr auto is_empty() const noexcept -> bool { return m_data_ptr == nullptr; }
-    constexpr auto has_value() const noexcept -> bool { return !is_empty(); }
+    [[nodiscard]] explicit constexpr operator bool() const noexcept { return has_value(); }
 
     [[nodiscard]] constexpr auto ptr() noexcept -> value_type* { return m_data_ptr; }
     [[nodiscard]] constexpr auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
 
-    [[nodiscard]] constexpr auto get() noexcept -> value_type* { return m_data_ptr; }
-    [[nodiscard]] constexpr auto get() const noexcept -> const value_type* { return m_data_ptr; }
-
+    [[nodiscard]]
     constexpr auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
         return (*self.ptr());
     }
 
+    [[nodiscard]]
     constexpr auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
