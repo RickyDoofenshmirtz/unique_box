@@ -1,6 +1,7 @@
 #include "handles/optional_handle.hpp"
 #include "handles/unique_handle.hpp"
 #include "handles/unique_pointer.hpp"
+#include "linked_list/opt_han_list/linked_list.hpp"
 
 #include <print>
 #include <utility>
@@ -75,10 +76,21 @@ namespace {
         [[maybe_unused]] auto view = handle.view();
         [[maybe_unused]] auto ptr  = handle.cptr();
     }
-}
+
+    void test_list()
+    {
+        linked_list list;
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.push_back(4);
+        list.push_back(5);
+        list.print();
+    }
+} // namespace
 
 int main()
 {
-    test_try_emplace();
+    test_list();
     return 0;
 }
