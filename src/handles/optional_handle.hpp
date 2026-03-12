@@ -4,6 +4,11 @@
 
 #include <cassert>
 #include <concepts>
+#include <exception>
+#include <functional>
+#include <memory>
+#include <new>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -15,6 +20,7 @@ public:
     using value_type = T;
 
     explicit optional_handle() noexcept
+        requires(std::is_nothrow_destructible_v<value_type>)
         : m_handle(unique_handle<value_type>{ nullptr })
     {
     }
@@ -70,24 +76,25 @@ public:
     }
 
     [[nodiscard]] explicit operator bool() const noexcept { return m_handle.m_data_ptr != nullptr; }
-
     [[nodiscard]] auto has_value() const noexcept -> bool { return m_handle.m_data_ptr != nullptr; }
 
+    [[nodiscard]]
     auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
         return (self.m_handle);
     }
 
+    [[nodiscard]]
     auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
         return (self.m_handle.operator->());
     }
 
-    auto handle(this auto&& self) noexcept -> decltype(auto) { return (*self); }
+    [[nodiscard]] auto handle(this auto&& self) noexcept -> decltype(auto) { return (*self); }
 
-    auto deref(this auto&& self) noexcept -> decltype(auto) { return (**self); }
+    [[nodiscard]] auto deref(this auto&& self) noexcept -> decltype(auto) { return (**self); }
 
     void reset() noexcept { m_handle = unique_handle<value_type>{ nullptr }; }
 
@@ -95,6 +102,62 @@ public:
     auto eject() noexcept -> unique_handle<value_type>
     {
         return std::exchange(m_handle, unique_handle<value_type>{ nullptr });
+    }
+
+    template <typename... Args>
+        requires(
+            std::is_nothrow_constructible_v<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    auto emplace(Args&&... args) noexcept -> value_type&
+    {
+        reset();
+        void* ptr = ::operator new(sizeof(value_type), std::nothrow);
+        if (ptr == nullptr) [[unlikely]] { std::terminate(); }
+        auto* data_ptr = static_cast<value_type*>(ptr);
+        std::construct_at(data_ptr, std::forward<Args>(args)...);
+        m_handle.m_data_ptr = data_ptr;
+        return *data_ptr;
+    }
+
+    template <typename... Args>
+        requires(
+            std::is_constructible_v<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    auto try_emplace(Args&&... args) noexcept // Replace with std::optional<value_type&>
+        -> std::optional<std::reference_wrapper<value_type>>
+    {
+        reset();
+        void* ptr = ::operator new(sizeof(value_type), std::nothrow);
+        if (ptr == nullptr) [[unlikely]] { return std::nullopt; }
+        auto* data_ptr = static_cast<value_type*>(ptr);
+        try {
+            std::construct_at(data_ptr, std::forward<Args>(args)...);
+            m_handle.m_data_ptr = data_ptr;
+            return std::optional{ std::ref(*data_ptr) };
+        } catch (...) {
+            ::operator delete(ptr);
+            return std::nullopt;
+        }
+    }
+
+    template <typename... Args>
+        requires(
+            std::is_constructible_v<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    auto force_emplace(Args&&... args) noexcept -> value_type&
+    {
+        reset();
+        void* ptr{};
+        try {
+            ptr            = ::operator new(sizeof(value_type));
+            auto* data_ptr = static_cast<value_type*>(ptr);
+            std::construct_at(data_ptr, std::forward<Args>(args)...);
+            m_handle.m_data_ptr = data_ptr;
+            return *data_ptr;
+        } catch (...) {
+            ::operator delete(ptr);
+            std::terminate();
+        }
     }
 
 private:

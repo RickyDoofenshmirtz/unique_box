@@ -68,7 +68,7 @@ public:
     static auto try_construct(Args&&... args) noexcept -> std::optional<unique_handle>
     {
         auto ptr = ::operator new(sizeof(value_type), std::nothrow);
-        if (ptr == nullptr) [[unlikely]] { return {}; }
+        if (ptr == nullptr) [[unlikely]] { return std::nullopt; }
         auto data_ptr = static_cast<value_type*>(ptr);
         try {
             std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
@@ -117,29 +117,31 @@ public:
 
     [[nodiscard]] explicit operator bool() const noexcept { return m_data_ptr != nullptr; }
 
-    auto ptr() noexcept -> value_type* { return m_data_ptr; }
-    auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
+    [[nodiscard]] auto ptr() noexcept -> value_type* { return m_data_ptr; }
+    [[nodiscard]] auto ptr() const noexcept -> const value_type* { return m_data_ptr; }
 
-    auto cptr() const noexcept -> const value_type* { return m_data_ptr; }
+    [[nodiscard]] auto cptr() const noexcept -> const value_type* { return m_data_ptr; }
 
-    auto get() noexcept -> value_type* { return m_data_ptr; }
-    auto get() const noexcept -> const value_type* { return m_data_ptr; }
+    [[nodiscard]] auto get() noexcept -> value_type* { return m_data_ptr; }
+    [[nodiscard]] auto get() const noexcept -> const value_type* { return m_data_ptr; }
 
+    [[nodiscard]]
     auto operator*(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
         return (*self.ptr());
     }
 
+    [[nodiscard]]
     auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
         return (self.ptr());
     }
 
-    auto deref(this auto&& self) noexcept -> decltype(auto) { return (*self); }
+    [[nodiscard]] auto deref(this auto&& self) noexcept -> decltype(auto) { return (*self); }
 
-    auto view(this auto&& self) noexcept { return handle_view{ self.ptr() }; }
+    [[nodiscard]] auto view(this auto&& self) noexcept { return handle_view{ self.ptr() }; }
 
 private:
     explicit unique_handle(value_type* data_ptr) noexcept

@@ -18,9 +18,9 @@ namespace {
     [[maybe_unused]]
     void test_unique_handle() noexcept
     {
-        auto _    = unique_handle<coordinate>::default_construct();
-        auto data = unique_handle<coordinate>::construct(5, 6);
-        data.operator*();
+        auto _      = unique_handle<coordinate>::default_construct();
+        auto data   = unique_handle<coordinate>::construct(5, 6);
+        auto _      = data.operator*();
         data->y     = 8;
         auto [x, y] = data.deref();
         std::println("[{}, {}]", x, y);
@@ -55,10 +55,27 @@ namespace {
         auto hand             = maybe_handle.eject();
         std::println("{}", x);
     }
+
+    [[maybe_unused]]
+    void test_emplace() noexcept
+    {
+        optional_handle<coordinate> handle{};
+        auto [x, y] = handle.emplace(5, 6);
+        std::println("{}, {}", x, y);
+    }
+
+    [[maybe_unused]]
+    void test_try_emplace() noexcept
+    {
+        auto handle = optional_handle<coordinate>{};
+        auto res    = handle.try_emplace(8, 9);
+        auto [x, y] = (*res).get();
+        std::println("{}, {}", x, y);
+    }
 }
 
 int main()
 {
-    test_optional_handle();
+    test_try_emplace();
     return 0;
 }
