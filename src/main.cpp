@@ -1,8 +1,8 @@
 #include "handles/optional_handle.hpp"
 #include "handles/unique_handle.hpp"
-#include "handles/unique_pointer.hpp"
 #include "linked_list/opt_han_list/linked_list.hpp"
 
+#include <new>
 #include <print>
 #include <string>
 #include <utility>
@@ -26,16 +26,6 @@ namespace {
         data->y     = 8;
         auto [x, y] = data.deref();
         std::println("[{}, {}]", x, y);
-    }
-
-    [[maybe_unused]]
-    void test_nullable_pointer() noexcept
-    {
-        auto str_ptr = unique_pointer<coordinate>::empty_construct();
-        str_ptr      = unique_pointer<coordinate>::construct(5, 6);
-        auto [x, y]  = str_ptr.deref();
-        std::println("{}, {}", x, y);
-        auto str_data = str_ptr.make_non_nullable().value();
     }
 
     auto get_optional_handle() noexcept -> optional_handle<coordinate>
@@ -102,10 +92,22 @@ namespace {
         list.print();
     }
 
+    void test_from_raw() noexcept
+    {
+        auto* ptr     = new(std::nothrow) coordinate(5, 6);
+        auto opt_hand = unique_handle<coordinate>::from_raw(ptr);
+        if (!opt_hand) { return; }
+        auto hand   = std::move(*opt_hand);
+        auto [x, y] = hand.deref();
+        std::println("{}, {}", x, y);
+        auto ptr2  = hand.ptr();
+        auto hand2 = unique_handle<coordinate>::from_raw(ptr2);
+    }
+
 } // namespace
 
 int main()
 {
-    test_string_list();
+    test_from_raw();
     return 0;
 }

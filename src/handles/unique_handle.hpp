@@ -35,9 +35,9 @@ public:
             std::is_nothrow_destructible_v<value_type>)
     static auto construct(Args&&... args) noexcept -> unique_handle
     {
-        auto ptr = ::operator new(sizeof(value_type), std::nothrow);
+        void* ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { std::terminate(); }
-        auto data_ptr = static_cast<value_type*>(ptr);
+        auto* data_ptr = static_cast<value_type*>(ptr);
         std::construct_at(data_ptr, std::forward<Args>(args)...);
         return unique_handle{ data_ptr };
     }
@@ -67,9 +67,9 @@ public:
             std::is_nothrow_destructible_v<value_type>)
     static auto try_construct(Args&&... args) noexcept -> std::optional<unique_handle>
     {
-        auto ptr = ::operator new(sizeof(value_type), std::nothrow);
+        void* ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { return std::nullopt; }
-        auto data_ptr = static_cast<value_type*>(ptr);
+        auto* data_ptr = static_cast<value_type*>(ptr);
         try {
             std::construct_at(data_ptr, std::forward<Args>(args)...);
             return std::optional{ unique_handle{ data_ptr } };
@@ -93,8 +93,8 @@ public:
     {
         void* ptr{};
         try {
-            ptr           = ::operator new(sizeof(value_type));
-            auto data_ptr = static_cast<value_type*>(ptr);
+            ptr            = ::operator new(sizeof(value_type));
+            auto* data_ptr = static_cast<value_type*>(ptr);
             std::construct_at(data_ptr, std::forward<Args>(args)...);
             return unique_handle{ data_ptr };
         } catch (...) {
@@ -108,11 +108,11 @@ public:
      * passed is a nullptr
      *
      */
-    static auto from_raw(value_type* data_ptr) noexcept -> std::optional<unique_handle>
+    static auto from_raw(value_type*& data_ptr) noexcept -> std::optional<unique_handle>
         requires(std::is_nothrow_destructible_v<value_type>)
     {
         if (data_ptr == nullptr) { return std::nullopt; }
-        return std::optional{ unique_handle{ data_ptr } };
+        return std::optional{ unique_handle{ std::exchange(data_ptr, nullptr) } };
     }
 
     [[nodiscard]] explicit operator bool() const noexcept { return m_data_ptr != nullptr; }

@@ -32,6 +32,11 @@ public:
 
     static auto empty_construct() noexcept -> optional_handle { return optional_handle{}; }
 
+    static auto from_raw(value_type*& data_ptr) noexcept -> optional_handle
+    {
+        return optional_handle{ std::exchange(data_ptr, nullptr) };
+    }
+
     template <typename... Args>
         requires(
             std::is_nothrow_constructible_v<value_type, Args...> &&
