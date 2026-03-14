@@ -100,8 +100,6 @@ namespace {
         auto hand   = std::move(*opt_hand);
         auto [x, y] = hand.deref();
         std::println("{}, {}", x, y);
-        auto ptr2  = hand.ptr();
-        auto hand2 = unique_handle<coordinate>::from_raw(ptr2);
     }
 
 } // namespace

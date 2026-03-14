@@ -24,11 +24,12 @@ public:
     template <typename U>
         requires(std::is_convertible_v<U*, T*>)
     constexpr handle_view(const handle_view<U>& src) noexcept
-        : m_data_ptr(src.get())
+        : m_data_ptr(src.ptr())
     {
     }
 
     [[nodiscard]] constexpr auto is_empty() const noexcept -> bool { return m_data_ptr == nullptr; }
+
     [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return !is_empty(); }
 
     [[nodiscard]] explicit constexpr operator bool() const noexcept { return has_value(); }
@@ -47,7 +48,7 @@ public:
     constexpr auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
-        return (self.ptr());
+        return self.ptr();
     }
 
     constexpr auto reset() noexcept -> value_type* { return reset_to(nullptr); }
