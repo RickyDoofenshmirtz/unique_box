@@ -4,6 +4,7 @@
 #include "linked_list/opt_han_list/linked_list.hpp"
 
 #include <print>
+#include <string>
 #include <utility>
 
 struct coordinate
@@ -77,9 +78,10 @@ namespace {
         [[maybe_unused]] auto ptr  = handle.cptr();
     }
 
+    [[maybe_unused]]
     void test_list()
     {
-        linked_list list;
+        linked_list<int> list;
         list.push_back(1);
         list.push_back(2);
         list.push_back(3);
@@ -87,10 +89,23 @@ namespace {
         list.push_back(5);
         list.print();
     }
+
+    [[maybe_unused]]
+    void test_string_list() noexcept
+    {
+        linked_list<std::string> list;
+        list.push_back("1");
+        list.push_back("2");
+        list.push_back("3");
+        list.push_back("4");
+        list.push_back("5");
+        list.print();
+    }
+
 } // namespace
 
 int main()
 {
-    test_list();
+    test_string_list();
     return 0;
 }

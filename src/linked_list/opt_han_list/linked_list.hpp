@@ -6,11 +6,13 @@
 #include <print>
 #include <utility>
 
+template <typename T>
 struct node;
 
-using T           = int;
-using node_handle = optional_handle<node>;
+template <typename T>
+using node_handle = optional_handle<node<T>>;
 
+template <typename T>
 struct node
 {
     explicit node(T data) noexcept
@@ -31,13 +33,13 @@ struct node
 
     auto detach_next() noexcept -> optional_handle<node>
     {
-        return std::exchange(m_next, node_handle{});
+        return std::exchange(m_next, node_handle<T>{});
     }
 
     template <typename... Args>
     void make_next(Args&&... args) noexcept
     {
-        m_next.emplace(std::forward<Args>(args)...);
+        m_next.force_emplace(std::forward<Args>(args)...);
     }
 
 private:
@@ -45,6 +47,7 @@ private:
     optional_handle<node> m_next;
 };
 
+template <typename T>
 class linked_list
 {
 public:
@@ -56,7 +59,7 @@ public:
     void emplace_back(Args&&... args) noexcept
     {
         if (m_head.is_empty()) {
-            m_head.emplace(std::forward<Args>(args)...);
+            m_head.force_emplace(std::forward<Args>(args)...);
             return;
         }
         auto curr = m_head.view();
@@ -77,5 +80,5 @@ public:
     }
 
 private:
-    node_handle m_head;
+    node_handle<T> m_head;
 };
