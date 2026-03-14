@@ -69,7 +69,7 @@ namespace {
     [[maybe_unused]]
     void test_try_emplace() noexcept
     {
-        auto handle = optional_handle<coordinate>{};
+        auto handle = optional_handle<coordinate>::empty_construct();
         auto res    = handle.try_emplace(8, 9);
         auto [x, y] = (*res).get();
         std::println("{}, {}", x, y);

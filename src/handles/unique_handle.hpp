@@ -38,7 +38,7 @@ public:
         auto ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { std::terminate(); }
         auto data_ptr = static_cast<value_type*>(ptr);
-        std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
+        std::construct_at(data_ptr, std::forward<Args>(args)...);
         return unique_handle{ data_ptr };
     }
 
@@ -52,7 +52,7 @@ public:
             std::is_nothrow_default_constructible_v<value_type> &&
             std::is_nothrow_destructible_v<value_type>)
     {
-        return construct(value_type{});
+        return construct();
     }
 
     /**
@@ -71,7 +71,7 @@ public:
         if (ptr == nullptr) [[unlikely]] { return std::nullopt; }
         auto data_ptr = static_cast<value_type*>(ptr);
         try {
-            std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
+            std::construct_at(data_ptr, std::forward<Args>(args)...);
             return std::optional{ unique_handle{ data_ptr } };
         } catch (...) {
             ::operator delete(ptr);
@@ -95,7 +95,7 @@ public:
         try {
             ptr           = ::operator new(sizeof(value_type));
             auto data_ptr = static_cast<value_type*>(ptr);
-            std::construct_at<value_type, Args...>(data_ptr, std::forward<Args>(args)...);
+            std::construct_at(data_ptr, std::forward<Args>(args)...);
             return unique_handle{ data_ptr };
         } catch (...) {
             ::operator delete(ptr);
@@ -133,7 +133,7 @@ public:
     auto operator->(this auto&& self) noexcept -> decltype(auto)
     {
         assert(self);
-        return (self.ptr());
+        return self.ptr();
     }
 
     [[nodiscard]] auto deref(this auto&& self) noexcept -> decltype(auto) { return (*self); }
