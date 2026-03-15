@@ -1,20 +1,7 @@
-#include "handles/static_vector.hpp"
+#include "containers/static_vector/static_vector.hpp"
+#include "test_handles.hpp"
 
 #include <print>
-
-struct coordinate
-{
-    int x{};
-    int y{};
-
-    coordinate(int x, int y) noexcept
-        : x(x), y(y)
-    {
-    }
-
-    auto get_x(this auto&& self) noexcept -> decltype(auto) { return (self.x); }
-    auto get_y(this auto&& self) noexcept -> decltype(auto) { return (self.y); }
-};
 
 namespace {
     [[maybe_unused]]
@@ -51,5 +38,6 @@ namespace {
 int main()
 {
     test_array();
+    test_string_list();
     return 0;
 }

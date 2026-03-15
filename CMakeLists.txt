@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.1.0)
-project(UNIQUE_BOX LANGUAGES CXX)
+project(UNIQUE_HANDLE LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -19,7 +19,11 @@ endif()
 
 add_subdirectory(src)
 
+add_executable(handle src/main.cpp)
+target_link_libraries(handle PRIVATE lib_handles)
+target_link_libraries(handle PRIVATE lib_containers)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(unique_box PRIVATE stdc++exp)
+    target_link_libraries(handle PRIVATE stdc++exp)
     message(STATUS "using g++, linking stdc++exp")
 endif()
