@@ -20,20 +20,27 @@ namespace {
     [[maybe_unused]]
     void test_array() noexcept
     {
-        auto arr = static_vector<int, 3>{};
-        arr.emplace_back(1);
-        arr.emplace_back(2);
-        arr.emplace_back(3);
-        arr.back() = 5;
-        for (auto& x : arr) { std::print("{} ", x); }
-        std::println();
+        auto arr = static_vector<coordinate, 3>{};
+        arr.emplace_back(1, 2);
+        arr.emplace_back(5, 9);
+        arr.emplace_back(7, 3);
+        for (auto& [x, y] : arr) { std::println("{}, {}", x, y); }
+        std::println("---");
+        if (auto last = arr.pop_back()) {
+            auto [x, y] = *last;
+            std::println("{} {}", x, y);
+        }
+        std::println("---");
+        for (auto& [x, y] : arr) { std::println("{}, {}", x, y); }
     }
 
     [[maybe_unused]]
     void test_emplace() noexcept
     {
-        auto arr   = static_vector<int, 5>{};
+        auto arr   = static_vector<int, 2>{};
         auto& last = arr.force_emplace_back(1);
+        arr.force_emplace_back(1);
+        arr.force_emplace_back(1);
         std::println("{}", last);
         last = 5;
         std::println("{}", arr.back());
@@ -43,6 +50,6 @@ namespace {
 
 int main()
 {
-    test_emplace();
+    test_array();
     return 0;
 }
