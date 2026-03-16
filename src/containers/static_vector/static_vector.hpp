@@ -13,12 +13,40 @@
 template <typename T, std::size_t N>
 struct aligned_storage
 {
-    alignas(alignof(T)) std::byte data[sizeof(T) * N];
+    alignas(T) std::byte data[sizeof(T) * N];
 
-    // NOLINTBEGIN
-    auto data_ptr() noexcept -> T* { return reinterpret_cast<T*>(data); }
-    auto data_ptr() const noexcept -> const T* { return reinterpret_cast<const T*>(data); }
-    // NOLINTEND
+    [[nodiscard]]
+    constexpr auto void_ptr(const std::size_t i = 0) noexcept -> void*
+    {
+        return static_cast<void*>(data + (i * sizeof(T)));
+    }
+
+    [[nodiscard]]
+    constexpr auto void_ptr(const std::size_t i = 0) const noexcept -> const void*
+    {
+        return static_cast<const void*>(data + (i * sizeof(T)));
+    }
+
+    [[nodiscard]]
+    constexpr auto data_ptr(const std::size_t i = 0) noexcept -> T*
+    {
+        return static_cast<T*>(void_ptr(i));
+    }
+
+    [[nodiscard]]
+    constexpr auto data_ptr(const std::size_t i = 0) const noexcept -> const T*
+    {
+        return static_cast<const T*>(void_ptr(i));
+    }
+
+    template <typename... Args>
+    constexpr auto construct_at(const std::size_t i, Args&&... args) noexcept -> T*
+    {
+        assert(i < N);
+        return std::construct_at(data_ptr(i), std::forward<Args>(args)...);
+    }
+
+    constexpr void destroy_at(const std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
 };
 
 template <typename T, std::size_t N>

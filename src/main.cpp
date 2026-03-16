@@ -15,7 +15,7 @@ namespace {
         std::println("---");
         if (auto last = arr.pop_back()) {
             auto [x, y] = *last;
-            std::println("{} {}", x, y);
+            std::println("{}, {}", x, y);
         }
         std::println("---");
         for (auto& [x, y] : arr) { std::println("{}, {}", x, y); }
@@ -38,6 +38,7 @@ namespace {
 int main()
 {
     test_array();
+    std::println("---");
     test_string_list();
     return 0;
 }
