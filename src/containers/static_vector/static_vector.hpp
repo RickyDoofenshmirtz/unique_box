@@ -4,9 +4,9 @@
 #include <cassert>
 #include <cstddef>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 
@@ -39,11 +39,26 @@ struct aligned_storage
         return static_cast<const T*>(void_ptr(i));
     }
 
+    [[nodiscard]] auto operator[](std::size_t i) noexcept -> T& { return *data_ptr(i); }
+    [[nodiscard]] auto operator[](std::size_t i) const noexcept -> const T& { return *data_ptr(i); }
+
     template <typename... Args>
+        requires(std::is_nothrow_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
     constexpr auto construct_at(const std::size_t i, Args&&... args) noexcept -> T*
     {
-        assert(i < N);
-        return std::construct_at(data_ptr(i), std::forward<Args>(args)...);
+        return new(void_ptr(i)) T(std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+        requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+    [[nodiscard]] constexpr auto try_construct_at(const std::size_t i, Args&&... args) noexcept
+        -> T*
+    {
+        try {
+            return new(void_ptr(i)) T(std::forward<Args>(args)...);
+        } catch (...) {
+            return nullptr;
+        }
     }
 
     constexpr void destroy_at(const std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
@@ -55,67 +70,103 @@ class static_vector
 public:
     using value_type = T;
     using size_type  = std::size_t;
+    using self_type  = static_vector<T, N>;
 
-private:
-    template <typename Self>
-    using cc_value_type = std::
-        conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const value_type, value_type>;
+    static constexpr auto construct() noexcept -> self_type
+        requires std::is_nothrow_destructible_v<value_type>
+    {
+        return static_vector{};
+    }
 
-public:
-    auto size() const noexcept -> size_type { return m_size; }
+    static constexpr auto construct(const std::size_t size) noexcept -> self_type
+        requires(
+            std::is_nothrow_default_constructible_v<value_type> &&
+            std::is_nothrow_destructible_v<value_type>)
+    {
+        if (size >= N) [[unlikely]] { std::terminate(); }
+        auto elm = static_vector{};
+        for (auto _ : std::ranges::views::indices(size)) { elm.emplace_back(); }
+        return elm;
+    }
 
-    auto max_size() const noexcept -> size_type { return N; }
-    auto capacity() const noexcept -> size_type { return N; }
+    constexpr auto size() const noexcept -> size_type { return m_size; }
 
-    auto is_empty() const noexcept -> bool { return size() == 0; }
-    auto is_full() const noexcept -> bool { return size() == max_size(); }
+    constexpr auto is_empty() const noexcept -> bool { return m_size == 0; }
+    constexpr auto is_not_empty() const noexcept -> bool { return !is_empty(); }
+    constexpr auto is_full() const noexcept -> bool { return size() == max_size(); }
 
-    auto begin(this auto&& self) noexcept -> decltype(auto) { return self.m_storage.data_ptr(); }
-    auto end(this auto&& self) noexcept -> decltype(auto) { return self.begin() + self.size(); }
+    constexpr auto max_size() const noexcept -> size_type { return N; }
+    constexpr auto capacity() const noexcept -> size_type { return N; }
 
-    auto front(this auto&& self) noexcept -> decltype(auto)
+    constexpr auto begin() noexcept -> value_type* { return m_data.data_ptr(); }
+    constexpr auto begin() const noexcept -> const value_type* { return m_data.data_ptr(); }
+
+    constexpr auto end() noexcept -> value_type* { return begin() + size(); }
+    constexpr auto end() const noexcept -> const value_type* { return begin() + size(); }
+
+    constexpr auto front(this auto&& self) noexcept -> decltype(auto)
     {
         assert(!self.is_empty());
         return (*self.begin());
     }
 
-    auto back(this auto&& self) noexcept -> decltype(auto)
+    constexpr auto back(this auto&& self) noexcept -> decltype(auto)
     {
         assert(!self.is_empty());
-        return (*(self.end() - size_type{ 1 }));
+        return (*(self.end() - 1ZU));
     }
 
-    auto operator[](this auto&& self, const size_type index) noexcept -> decltype(auto)
+    constexpr auto operator[](const size_type index) noexcept -> value_type&
     {
-        return (self.m_storage.data_ptr()[index]);
+        return m_data[index];
     }
-
-    template <typename Self>
-    auto at(this Self&& self, const size_type index) noexcept
-        -> std::optional<std::reference_wrapper<cc_value_type<Self>>>
+    constexpr auto operator[](const size_type index) const noexcept -> const value_type&
     {
-        if (index >= self.size()) { return std::nullopt; }
-        return std::forward<Self>(self)[index];
+        return m_data[index];
     }
 
-    void clear() noexcept
+    constexpr auto at(const size_type index) noexcept -> std::optional<value_type&>
+    {
+        if (index >= size()) [[unlikely]] { return std::nullopt; }
+        return m_data[index];
+    }
+
+    constexpr auto at(const size_type index) const noexcept -> std::optional<const value_type&>
+    {
+        if (index >= size()) [[unlikely]] { return std::nullopt; }
+        return m_data[index];
+    }
+
+    constexpr void clear() noexcept
     {
         std::ranges::destroy(*this);
         m_size = 0;
     }
 
-    void push_back(const value_type& data) noexcept { emplace_back(data); }
+    constexpr void push_back(const value_type& data) noexcept { emplace_back(data); }
 
-    void push_back(value_type&& data) noexcept { emplace_back(std::move(data)); }
+    constexpr void push_back(value_type&& data) noexcept { emplace_back(std::move(data)); }
 
     template <typename... Args>
         requires(
             std::is_nothrow_constructible_v<value_type, Args...> &&
             std::is_nothrow_destructible_v<value_type>)
-    auto emplace_back(Args&&... args) noexcept -> value_type&
+    constexpr auto emplace_back(Args&&... args) noexcept -> std::optional<value_type&>
     {
-        if (is_full()) [[unlikely]] { return back(); }
-        std::construct_at(end(), std::forward<Args>(args)...);
+        if (is_full()) [[unlikely]] { return std::nullopt; }
+        m_data.construct_at(m_size++, std::forward<Args>(args)...);
+        return back();
+    }
+
+    template <typename... Args>
+        requires(
+            std::is_constructible_v<value_type, Args...> &&
+            std::is_nothrow_destructible_v<value_type>)
+    constexpr auto try_emplace_back(Args&&... args) noexcept -> std::optional<value_type&>
+    {
+        if (is_full()) [[unlikely]] { return std::nullopt; }
+        auto res_ptr = m_data.try_construct_at(m_size, std::forward<Args>(args)...);
+        if (res_ptr == nullptr) [[unlikely]] { return std::nullopt; }
         ++m_size;
         return back();
     }
@@ -124,27 +175,10 @@ public:
         requires(
             std::is_constructible_v<value_type, Args...> &&
             std::is_nothrow_destructible_v<value_type>)
-    auto try_emplace_back(Args&&... args) noexcept
-        -> std::optional<std::reference_wrapper<value_type>>
+    constexpr auto force_emplace_back(Args&&... args) noexcept -> value_type&
     {
-        if (is_full()) [[unlikely]] { return std::nullopt; }
+        if (is_full()) [[unlikely]] { std::terminate(); }
         try {
-            std::construct_at(end(), std::forward<Args>(args)...);
-            ++m_size;
-            return back();
-        } catch (...) {
-            return std::nullopt;
-        }
-    }
-
-    template <typename... Args>
-        requires(
-            std::is_constructible_v<value_type, Args...> &&
-            std::is_nothrow_destructible_v<value_type>)
-    auto force_emplace_back(Args&&... args) noexcept -> value_type&
-    {
-        try {
-            if (is_full()) [[unlikely]] { throw; }
             std::construct_at(end(), std::forward<Args>(args)...);
             ++m_size;
             return back();
@@ -154,7 +188,7 @@ public:
         }
     }
 
-    auto pop_back() noexcept -> std::optional<value_type>
+    constexpr auto pop_back() noexcept -> std::optional<value_type>
     {
         auto last = back();
         --m_size;
@@ -162,6 +196,37 @@ public:
     }
 
 private:
-    aligned_storage<T, N> m_storage;
-    std::size_t m_size;
+    explicit constexpr static_vector() noexcept = default;
+
+public:
+    constexpr static_vector(const static_vector& src) noexcept                    = delete;
+    constexpr auto operator=(const static_vector& src) noexcept -> static_vector& = delete;
+
+    constexpr static_vector(static_vector&& src) noexcept
+    {
+        for (auto i : std::ranges::views::indices(src.m_size)) {
+            m_data.construct_at(i, std::move(src[i]));
+            ++m_size;
+        }
+        src.clear();
+    }
+
+    constexpr auto operator=(static_vector&& src) noexcept -> static_vector&
+    {
+        if (this == std::addressof(src)) { return *this; }
+        for (auto&& [t, s] : std::ranges::views::zip(*this, src)) { t = std::move(s); }
+        for (auto i : std::ranges::views::iota(src.m_size, m_size)) { m_data.destroy_at(i); }
+        for (auto i : std::ranges::views::iota(m_size, src.m_size)) {
+            m_data.construct_at(i, std::move(src.m_data[i]));
+        }
+        m_size = src.m_size;
+        src.clear();
+        return *this;
+    }
+
+    constexpr ~static_vector() noexcept { clear(); }
+
+private:
+    aligned_storage<T, N> m_data{};
+    std::size_t m_size{};
 };

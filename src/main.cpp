@@ -7,7 +7,7 @@ namespace {
     [[maybe_unused]]
     void test_array() noexcept
     {
-        auto arr = static_vector<coordinate, 3>{};
+        auto arr = static_vector<coordinate, 3>::construct();
         arr.emplace_back(1, 2);
         arr.emplace_back(5, 9);
         arr.emplace_back(7, 3);
@@ -24,7 +24,7 @@ namespace {
     [[maybe_unused]]
     void test_emplace() noexcept
     {
-        auto arr   = static_vector<int, 2>{};
+        auto arr   = static_vector<int, 2>::construct();
         auto& last = arr.force_emplace_back(1);
         arr.force_emplace_back(1);
         arr.force_emplace_back(1);
