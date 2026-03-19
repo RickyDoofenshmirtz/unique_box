@@ -124,8 +124,9 @@ public:
     [[nodiscard]] auto view(this auto&& self) noexcept { return handle_view{ self.ptr() }; }
 
     [[nodiscard]]
-    auto eject() noexcept -> unique_handle<value_type>
+    auto eject() noexcept -> std::optional<unique_handle<value_type>>
     {
+        if (is_empty()) [[unlikely]] { return std::nullopt; }
         return std::exchange(m_handle, unique_handle<value_type>{ nullptr });
     }
 
@@ -150,8 +151,7 @@ public:
         requires(
             std::is_constructible_v<value_type, Args...> &&
             std::is_nothrow_destructible_v<value_type>)
-    auto try_emplace(Args&&... args) noexcept // Replace with std::optional<value_type&>
-        -> std::optional<std::reference_wrapper<value_type>>
+    auto try_emplace(Args&&... args) noexcept -> std::optional<value_type&>
     {
         reset();
         void* ptr = ::operator new(sizeof(value_type), std::nothrow);
