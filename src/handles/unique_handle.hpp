@@ -3,7 +3,6 @@
 #include "handle_view.hpp"
 
 #include <cassert>
-#include <concepts>
 #include <exception>
 #include <memory>
 #include <new>
@@ -63,7 +62,7 @@ public:
      */
     template <typename... Args>
         requires(
-            std::constructible_from<value_type, Args...> &&
+            std::is_constructible_v<value_type, Args...> &&
             std::is_nothrow_destructible_v<value_type>)
     static auto try_construct(Args&&... args) noexcept -> std::optional<unique_handle>
     {
@@ -87,7 +86,7 @@ public:
      */
     template <typename... Args>
         requires(
-            std::constructible_from<value_type, Args...> &&
+            std::is_constructible_v<value_type, Args...> &&
             std::is_nothrow_destructible_v<value_type>)
     static auto force_construct(Args&&... args) noexcept -> unique_handle
     {
