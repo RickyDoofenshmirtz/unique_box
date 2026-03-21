@@ -3,7 +3,6 @@
 #include "logging.hpp"
 #include "test_handles.hpp"
 
-#include <cstddef>
 #include <print>
 
 namespace {
@@ -40,7 +39,7 @@ namespace {
 
     class coordinate
     {
-        friend unique_handle<coordinate>;
+        friend optional_handle<coordinate>;
 
     public:
         static auto construct(int x, int y) noexcept -> coordinate { return coordinate{ x, y }; }
@@ -61,15 +60,10 @@ namespace {
     [[maybe_unused]]
     void test_placement_new() noexcept
     {
-        auto _ = entry_logger{};
-        alignas(coordinate) std::byte data[sizeof(coordinate)];
-        auto ptr = new(static_cast<void*>(data)) coordinate(coordinate::construct(5, 6));
-        // auto ptr = new(static_cast<void*>(data)) coordinate(5, 6);
-        auto x = ptr->get_x();
-        auto y = ptr->get_y();
-        std::println("{}, {}", x, y);
-
-        // auto handle = unique_handle<coordinate>::construct(5, 5);
+        auto _      = entry_logger{};
+        auto handle = optional_handle<coordinate>{};
+        auto c      = coordinate::construct(3, 4);
+        handle.emplace(c);
     }
 
 } // namespace
