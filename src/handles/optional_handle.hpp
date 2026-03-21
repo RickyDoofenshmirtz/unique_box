@@ -152,7 +152,7 @@ public:
         try {
             auto* data_ptr      = new(ptr) value_type(std::forward<Args>(args)...);
             m_handle.m_data_ptr = data_ptr;
-            return std::optional{ *data_ptr };
+            return *data_ptr;
         } catch (...) {
             ::operator delete(ptr);
             return std::nullopt;
