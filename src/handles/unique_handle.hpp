@@ -36,8 +36,7 @@ public:
     {
         void* ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { std::terminate(); }
-        auto* data_ptr = static_cast<value_type*>(ptr);
-        std::construct_at(data_ptr, std::forward<Args>(args)...);
+        auto* data_ptr = new(ptr) value_type(std::forward<Args>(args)...);
         return unique_handle{ data_ptr };
     }
 
@@ -68,9 +67,8 @@ public:
     {
         void* ptr = ::operator new(sizeof(value_type), std::nothrow);
         if (ptr == nullptr) [[unlikely]] { return std::nullopt; }
-        auto* data_ptr = static_cast<value_type*>(ptr);
         try {
-            std::construct_at(data_ptr, std::forward<Args>(args)...);
+            auto* data_ptr = new(ptr) value_type(std::forward<Args>(args)...);
             return std::optional{ unique_handle{ data_ptr } };
         } catch (...) {
             ::operator delete(ptr);
@@ -93,8 +91,7 @@ public:
         void* ptr{};
         try {
             ptr            = ::operator new(sizeof(value_type));
-            auto* data_ptr = static_cast<value_type*>(ptr);
-            std::construct_at(data_ptr, std::forward<Args>(args)...);
+            auto* data_ptr = new(ptr) value_type(std::forward<Args>(args)...);
             return unique_handle{ data_ptr };
         } catch (...) {
             ::operator delete(ptr);
