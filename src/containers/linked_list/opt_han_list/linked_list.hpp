@@ -1,7 +1,7 @@
 #pragma once
 
-#include "handles/optional_handle.hpp"
-#include "handles/unique_handle.hpp"
+#include "memory/optional_handle.hpp"
+#include "memory/unique_handle.hpp"
 
 #include <print>
 #include <utility>

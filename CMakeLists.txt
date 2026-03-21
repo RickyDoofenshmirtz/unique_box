@@ -17,10 +17,11 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "C++ Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
+add_subdirectory(include)
 add_subdirectory(src)
 
 add_executable(handle src/main.cpp)
-target_link_libraries(handle PRIVATE lib_handles)
+target_link_libraries(handle PRIVATE lib_memory)
 target_link_libraries(handle PRIVATE lib_containers)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

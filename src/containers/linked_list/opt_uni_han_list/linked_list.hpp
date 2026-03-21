@@ -1,7 +1,7 @@
 #pragma once
 
-#include "handles/handle_view.hpp"
-#include "handles/unique_handle.hpp"
+#include "memory/handle_view.hpp"
+#include "memory/unique_handle.hpp"
 
 #include <optional>
 #include <print>

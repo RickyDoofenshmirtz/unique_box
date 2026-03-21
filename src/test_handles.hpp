@@ -1,9 +1,9 @@
 #pragma once
 
 #include "containers/linked_list/opt_han_list/linked_list.hpp"
-#include "handles/optional_handle.hpp"
-#include "handles/unique_handle.hpp"
 #include "logging.hpp"
+#include "memory/optional_handle.hpp"
+#include "memory/unique_handle.hpp"
 
 #include <new>
 #include <print>
