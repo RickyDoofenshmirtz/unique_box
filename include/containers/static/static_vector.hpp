@@ -204,7 +204,9 @@ public:
 
     constexpr static_vector(static_vector&& src) noexcept
     {
-        for (auto i : std::ranges::views::indices(src.m_size)) {
+        for (auto i : //
+             std::ranges::views::indices(src.m_size))
+        {
             m_data.construct_at(i, std::move(src[i]));
             ++m_size;
         }
@@ -216,7 +218,8 @@ public:
         if (this == std::addressof(src)) { return *this; }
         for (auto&& [t, s] : std::ranges::views::zip(*this, src)) { t = std::move(s); }
         for (auto i : std::ranges::views::iota(src.m_size, m_size)) { m_data.destroy_at(i); }
-        for (auto i : std::ranges::views::iota(m_size, src.m_size)) {
+        for (auto i : std::ranges::views::iota(m_size, src.m_size)) //
+        {
             m_data.construct_at(i, std::move(src.m_data[i]));
         }
         m_size = src.m_size;
