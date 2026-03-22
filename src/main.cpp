@@ -1,4 +1,4 @@
-#include "containers/static_vector/static_vector.hpp"
+#include "containers/static/static_vector.hpp"
 #include "logging.hpp"
 #include "memory/unique_handle.hpp"
 #include "test_handles.hpp"
