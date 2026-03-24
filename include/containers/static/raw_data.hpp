@@ -22,11 +22,12 @@ public:
     }
 
     // NOLINTBEGIN
-    // clang-format off
     constexpr auto data_ptr() noexcept -> T* { return std::launder(reinterpret_cast<T*>(m_data)); }
-    constexpr auto data_ptr() const noexcept -> const T*  { return std::launder(reinterpret_cast<const T*>(m_data)); }
+    constexpr auto data_ptr() const noexcept -> const T*
+    {
+        return std::launder(reinterpret_cast<const T*>(m_data));
+    }
     // NOLINTEND
-    // clang-format on
 
     constexpr auto value() noexcept -> T& { return *data_ptr(); }
     constexpr auto value() const noexcept -> const T& { return *data_ptr(); }
