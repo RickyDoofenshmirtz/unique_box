@@ -7,7 +7,7 @@ namespace {
     [[maybe_unused]]
     void func() noexcept
     {
-        static_queue<coordinate, 10> q;
+        auto q = static_queue<coordinate, 10>::construct();
         q.emplace_back(2, 3);
         q.emplace_back(8, 9);
         q.emplace_back(7, 3);
@@ -23,5 +23,6 @@ namespace {
 int main()
 {
     func();
+    std::println("Exiting");
     return 0;
 }

@@ -1,63 +1,63 @@
 #pragma once
 
-#include <algorithm>
+#include "raw_storage.hpp"
+
 #include <cstddef>
+#include <exception>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
-using T             = int;
-const std::size_t N = 10;
-
-class index_type
+template <std::size_t N>
+class circular_index
 {
 public:
-    constexpr index_type() noexcept = default;
+    circular_index() noexcept = default;
 
-    constexpr index_type(std::size_t index) noexcept
+    circular_index(const std::size_t index) noexcept
         : m_index(index)
     {
     }
 
-    constexpr auto get() const noexcept -> std::size_t { return m_index; }
+    operator std::size_t() const noexcept { return m_index; }
 
-    explicit constexpr operator std::size_t() const { return m_index; }
+    auto operator<=>(const circular_index&) const noexcept = default;
 
-    constexpr auto operator<=>(const index_type&) const = default;
-
-    friend constexpr auto operator-(const index_type& a, const index_type& b) -> index_type
+    auto operator=(const std::size_t i) noexcept -> circular_index&
     {
-        return index_type{ a.m_index - b.m_index };
-    }
-
-    friend constexpr auto operator+(const index_type& a, const index_type& b) -> index_type
-    {
-        return index_type{ a.m_index + b.m_index };
-    }
-
-    constexpr auto operator++() noexcept -> index_type&
-    {
-        ++m_index;
+        m_index = i;
         return *this;
     }
 
-    constexpr auto operator++(int) noexcept -> index_type
+    auto operator++() noexcept -> circular_index&
     {
-        auto prev = *this;
+        m_index = (m_index + 1) % N;
+        return *this;
+    }
+
+    auto operator++(int) noexcept -> circular_index
+    {
+        auto old = *this;
         ++(*this);
-        return prev;
+        return old;
     }
 
-    constexpr auto next() const noexcept -> index_type
+    friend constexpr auto operator-(const circular_index& a, const circular_index& b)
+        -> circular_index
     {
-        auto next_index = (m_index + 1) % N;
-        return index_type{ next_index };
+        return circular_index{ a.m_index - b.m_index };
     }
 
-    constexpr auto prev() const noexcept -> index_type
+    friend constexpr auto operator+(const circular_index& a, const circular_index& b)
+        -> circular_index
     {
-        auto next_index = (m_index + N - 1) % N;
-        return index_type{ next_index };
+        return circular_index{ a.m_index + b.m_index };
     }
+
+    auto next() const noexcept -> circular_index { return circular_index{ (0 + m_index + 1) % N }; }
+    auto prev() const noexcept -> circular_index { return circular_index{ (N + m_index - 1) % N }; }
+
+    auto to_size_type() const noexcept -> std::size_t { return m_index; }
 
 private:
     std::size_t m_index{};
@@ -67,67 +67,91 @@ template <typename T, std::size_t N>
 class static_queue
 {
 public:
-    constexpr static_queue() noexcept = default;
+    using value_type = T;
 
-    constexpr auto size() const noexcept -> std::size_t { return (N + m_end - m_beg) % N; }
+    static_queue() noexcept = default;
 
-    constexpr auto is_empty() const noexcept -> bool { return m_beg == m_end; }
+    static_queue(const static_queue& src) = delete;
+    static_queue(static_queue&& src)      = delete;
 
-    constexpr auto front() noexcept -> std::optional<T&>
+    auto operator=(const static_queue& src) -> static_queue& = delete;
+    auto operator=(static_queue&& src) -> static_queue&      = delete;
+
+    ~static_queue() noexcept { clear(); }
+
+    static auto construct() noexcept -> static_queue
+        requires(std::is_nothrow_destructible_v<T>)
+    {
+        return static_queue{};
+    }
+
+    auto size() const noexcept -> std::size_t
+    {
+        return (N + m_end.to_size_type() - m_beg.to_size_type()) % N;
+    }
+
+    auto is_empty() const noexcept -> bool { return m_beg == m_end; }
+
+    auto is_full() const noexcept -> bool { return m_end.next() == m_beg; }
+
+    auto front() noexcept -> std::optional<T&>
     {
         if (is_empty()) { return std::nullopt; }
         return m_data[m_beg];
     }
-    constexpr auto front() const noexcept -> std::optional<const T&>
+
+    auto front() const noexcept -> std::optional<const T&>
     {
         if (is_empty()) { return std::nullopt; }
         return m_data[m_beg];
     }
 
-    constexpr auto back() noexcept -> std::optional<T&>
+    auto back() noexcept -> std::optional<T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[prev_index(m_end)];
+        return m_data[m_end];
     }
 
-    constexpr auto back() const noexcept -> std::optional<const T&>
+    auto back() const noexcept -> std::optional<const T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[prev_index(m_end)];
-    }
-
-    constexpr auto next_index(const std::size_t i) const noexcept -> std::size_t
-    {
-        return (i + 1) % N;
-    }
-
-    constexpr auto prev_index(const std::size_t i) const noexcept -> std::size_t
-    {
-        return (N + i - 1) % N;
-    }
-
-    constexpr auto push_back(T data) noexcept -> std::optional<T&>
-    {
-        return emplace_back(std::move(data));
+        return m_data[m_end];
     }
 
     template <typename... Args>
-    auto emplace_back(Args&&... args) noexcept -> std::optional<T&>
+        requires(std::is_nothrow_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+    auto emplace_back(Args&&... args) noexcept -> T&
     {
-        const auto next = next_index(m_end);
-        if (next == m_beg) [[unlikely]] { return std::nullopt; }
-        m_data[m_end] = T(std::forward<Args>(args)...);
-        return m_data[std::exchange(m_end, next)];
+        if (is_full()) [[unlikely]] { std::terminate(); }
+        return m_data.construct_at(m_end++, std::forward<Args>(args)...);
     }
 
-    constexpr auto pop_front() noexcept -> std::optional<T>
+    template <typename... Args>
+        requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+    auto try_emplace_back(Args&&... args) noexcept -> std::optional<T&>
     {
-        if (is_empty()) { return std::nullopt; }
-        return std::move(m_data[std::exchange(m_beg, next_index(m_beg))]);
+        if (is_full()) [[unlikely]] { return std::nullopt; }
+        auto maybe_elm = m_data.try_construct_at(m_end, std::forward<Args>(args)...);
+        if (!maybe_elm) [[unlikely]] { return std::nullopt; }
+        ++m_end;
+        return maybe_elm;
+    }
+
+    auto pop_front() noexcept -> std::optional<T>
+    {
+        auto maybe_front = front();
+        if (!maybe_front) { return std::nullopt; }
+        ++m_beg;
+        return std::move(*maybe_front);
+    }
+
+    auto clear() noexcept
+    {
+        for (auto i = m_beg; i < m_end; ++i) { m_data.destroy_at(i); }
     }
 
 private:
-    T m_data[N]{};
-    std::size_t m_beg{};
-    std::size_t m_end{};
+    raw_storage<T, N> m_data;
+    circular_index<N> m_beg;
+    circular_index<N> m_end;
 };
