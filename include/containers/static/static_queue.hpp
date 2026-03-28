@@ -1,143 +1,115 @@
 #pragma once
 
+#include "circular_index.hpp"
 #include "raw_storage.hpp"
 
 #include <cstddef>
 #include <exception>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
-
-template <std::size_t N>
-class circular_index
-{
-public:
-    circular_index() noexcept = default;
-
-    circular_index(const std::size_t index) noexcept
-        : m_index(index)
-    {
-    }
-
-    operator std::size_t() const noexcept { return m_index; }
-
-    auto operator<=>(const circular_index&) const noexcept = default;
-
-    auto operator=(const std::size_t i) noexcept -> circular_index&
-    {
-        m_index = i;
-        return *this;
-    }
-
-    auto operator++() noexcept -> circular_index&
-    {
-        m_index = (m_index + 1) % N;
-        return *this;
-    }
-
-    auto operator++(int) noexcept -> circular_index
-    {
-        auto old = *this;
-        ++(*this);
-        return old;
-    }
-
-    friend constexpr auto operator-(const circular_index& a, const circular_index& b)
-        -> circular_index
-    {
-        return circular_index{ a.m_index - b.m_index };
-    }
-
-    friend constexpr auto operator+(const circular_index& a, const circular_index& b)
-        -> circular_index
-    {
-        return circular_index{ a.m_index + b.m_index };
-    }
-
-    auto next() const noexcept -> circular_index { return circular_index{ (0 + m_index + 1) % N }; }
-    auto prev() const noexcept -> circular_index { return circular_index{ (N + m_index - 1) % N }; }
-
-    auto to_size_type() const noexcept -> std::size_t { return m_index; }
-
-private:
-    std::size_t m_index{};
-};
 
 template <typename T, std::size_t N>
 class static_queue
 {
 public:
     using value_type = T;
+    using index_type = circular_index<N>;
 
-    static_queue() noexcept = default;
+    constexpr static_queue() noexcept = default;
 
-    static_queue(const static_queue& src) = delete;
-    static_queue(static_queue&& src)      = delete;
+    constexpr static_queue(const static_queue& src)                    = delete;
+    constexpr auto operator=(const static_queue& src) -> static_queue& = delete;
 
-    auto operator=(const static_queue& src) -> static_queue& = delete;
-    auto operator=(static_queue&& src) -> static_queue&      = delete;
+    constexpr static_queue(static_queue&& src) noexcept
+    {
+        for (auto i = src.m_beg; i != src.m_end; ++i) //
+        {
+            std::construct_at(m_data.data_ptr(i.to_size_t()), std::move(src.m_data[i.to_size_t()]));
+            std::destroy_at(src.m_data.data_ptr(i.to_size_t()));
+        }
+        m_beg = std::exchange(src.m_beg, index_type::zero());
+        m_end = std::exchange(src.m_end, index_type::zero());
+    }
 
-    ~static_queue() noexcept { clear(); }
+    constexpr auto operator=(static_queue&& src) noexcept -> static_queue&
+    {
+        if (this == std::addressof(src)) { return *this; }
+        clear();
+        for (auto i = src.m_beg; i != src.m_end; ++i) //
+        {
+            std::construct_at(m_data.data_ptr(i.to_size_t()), std::move(src.m_data[i.to_size_t()]));
+            std::destroy_at(src.m_data.data_ptr(i.to_size_t()));
+        }
+        m_beg = std::exchange(src.m_beg, index_type::zero());
+        m_end = std::exchange(src.m_end, index_type::zero());
+        return *this;
+    }
 
-    static auto construct() noexcept -> static_queue
+    constexpr ~static_queue() noexcept { clear(); }
+
+    static constexpr auto construct() noexcept -> static_queue
         requires(std::is_nothrow_destructible_v<T>)
     {
         return static_queue{};
     }
 
-    auto size() const noexcept -> std::size_t
+    constexpr auto size() const noexcept -> std::size_t
     {
-        return (N + m_end.to_size_type() - m_beg.to_size_type()) % N;
+        return (N + m_end.to_size_t() - m_beg.to_size_t()) % N;
     }
 
-    auto is_empty() const noexcept -> bool { return m_beg == m_end; }
+    constexpr auto is_empty() const noexcept -> bool { return m_beg == m_end; }
 
-    auto is_full() const noexcept -> bool { return m_end.next() == m_beg; }
+    constexpr auto is_full() const noexcept -> bool { return m_end.next() == m_beg; }
 
-    auto front() noexcept -> std::optional<T&>
+    constexpr auto front() noexcept -> std::optional<T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[m_beg];
+        return m_data[m_beg.to_size_t()];
     }
 
-    auto front() const noexcept -> std::optional<const T&>
+    constexpr auto front() const noexcept -> std::optional<const T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[m_beg];
+        return m_data[m_beg.to_size_t()];
     }
 
-    auto back() noexcept -> std::optional<T&>
+    constexpr auto back() noexcept -> std::optional<T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[m_end];
+        return m_data[m_end.prev().to_size_t()];
     }
 
-    auto back() const noexcept -> std::optional<const T&>
+    constexpr auto back() const noexcept -> std::optional<const T&>
     {
         if (is_empty()) { return std::nullopt; }
-        return m_data[m_end];
+        return m_data[m_end.prev().to_size_t()];
     }
 
     template <typename... Args>
         requires(std::is_nothrow_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
-    auto emplace_back(Args&&... args) noexcept -> T&
+    constexpr auto emplace_back(Args&&... args) noexcept -> T&
     {
         if (is_full()) [[unlikely]] { std::terminate(); }
-        return m_data.construct_at(m_end++, std::forward<Args>(args)...);
+        auto& elm = m_data.construct_at(m_end.to_size_t(), std::forward<Args>(args)...);
+        ++m_end;
+        return elm;
     }
 
     template <typename... Args>
         requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
-    auto try_emplace_back(Args&&... args) noexcept -> std::optional<T&>
+    constexpr auto try_emplace_back(Args&&... args) noexcept -> std::optional<T&>
     {
         if (is_full()) [[unlikely]] { return std::nullopt; }
-        auto maybe_elm = m_data.try_construct_at(m_end, std::forward<Args>(args)...);
+        auto maybe_elm = m_data.try_construct_at(m_end.to_size_t(), std::forward<Args>(args)...);
         if (!maybe_elm) [[unlikely]] { return std::nullopt; }
         ++m_end;
         return maybe_elm;
     }
 
-    auto pop_front() noexcept -> std::optional<T>
+    constexpr auto pop_front() noexcept -> std::optional<T>
     {
         auto maybe_front = front();
         if (!maybe_front) { return std::nullopt; }
@@ -145,9 +117,11 @@ public:
         return std::move(*maybe_front);
     }
 
-    auto clear() noexcept
+    constexpr void clear() noexcept
     {
-        for (auto i = m_beg; i < m_end; ++i) { m_data.destroy_at(i); }
+        for (auto i = m_beg; i != m_end; ++i) { m_data.destroy_at(i.to_size_t()); }
+        m_beg = index_type::zero();
+        m_end = index_type::zero();
     }
 
 private:
