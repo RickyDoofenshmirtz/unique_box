@@ -54,5 +54,5 @@ public:
     constexpr void destroy_at(const std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
 
 private:
-    alignas(T) std::byte m_data[sizeof(T) * N];
+    alignas(T) std::byte m_data[sizeof(T) * N]{};
 };
