@@ -2,3 +2,5 @@ build
 out
 .cache
 .vs
+.vscode
+external
