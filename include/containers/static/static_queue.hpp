@@ -92,7 +92,7 @@ public:
         requires(std::is_nothrow_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
     constexpr auto emplace_back(Args&&... args) noexcept -> T&
     {
-        if (is_full()) [[unlikely]] { std::terminate(); }
+        if (is_full()) [[unlikely]] { m_clear_and_terminate(); }
         auto& elm = m_data.construct_at(m_end.to_size_t(), std::forward<Args>(args)...);
         ++m_end;
         return elm;
@@ -103,10 +103,13 @@ public:
     constexpr auto try_emplace_back(Args&&... args) noexcept -> std::optional<T&>
     {
         if (is_full()) [[unlikely]] { return std::nullopt; }
-        auto maybe_elm = m_data.try_construct_at(m_end.to_size_t(), std::forward<Args>(args)...);
-        if (!maybe_elm) [[unlikely]] { return std::nullopt; }
-        ++m_end;
-        return maybe_elm;
+        if (auto maybe_elm =
+                m_data.try_construct_at(m_end.to_size_t(), std::forward<Args>(args)...))
+        {
+            ++m_end;
+            return maybe_elm;
+        }
+        return std::nullopt;
     }
 
     constexpr auto pop_front() noexcept -> std::optional<T>
@@ -125,6 +128,13 @@ public:
     }
 
 private:
+    [[noreturn]]
+    void m_clear_and_terminate() noexcept
+    {
+        clear();
+        std::terminate();
+    }
+
     raw_storage<T, N> m_data;
     circular_index<N> m_beg;
     circular_index<N> m_end;
