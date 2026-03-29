@@ -35,12 +35,12 @@ namespace {
 
         constexpr auto data_ptr(const std::size_t i = 0) noexcept -> T*
         {
-            return static_cast<T*>(m_data) + i;
+            return static_cast<T*>(m_data) + i; // NOLINT
         }
 
         constexpr auto data_ptr(const std::size_t i = 0) const noexcept -> const T*
         {
-            return static_cast<const T*>(m_data) + i;
+            return static_cast<const T*>(m_data) + i; // NOLINT
         }
 
         template <typename... Args>
@@ -59,7 +59,7 @@ namespace {
                 if constexpr (
                     std::is_trivially_default_constructible_v<T> && std::is_trivially_copyable_v<T>)
                 {
-                    for (std::size_t i = 0; i < N; ++i) { m_data[i] = T(); }
+                    for (std::size_t i = 0; i < N; ++i) { m_data[i] = T(); } // NOLINT
                 } else {
                     std::unreachable();
                 }
