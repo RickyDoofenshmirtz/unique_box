@@ -2,11 +2,12 @@
 #include "coordinate.hpp"
 
 #include <print>
+#include <string>
 #include <utility>
 
 namespace {
     [[maybe_unused]]
-    void func() noexcept
+    void test_queue() noexcept
     {
         auto q = static_queue<coordinate, 10>::construct();
         q.emplace_back(2, 3);
@@ -43,6 +44,16 @@ namespace {
             auto [fx, fy] = f->get();
             std::println("front = [{}, {}]", fx, fy);
         }
+    }
+
+    void func() noexcept
+    {
+        auto q = static_queue<std::string, 5>::construct();
+        q.force_emplace_back("meow");
+        q.force_emplace_back("woof");
+        if (auto f = q.front()) { std::println("front = {}", *f); }
+        if (auto b = q.back()) { std::println("back = {}", *b); }
+        while (auto f = q.pop_front()) { std::println("{}", *f); }
     }
 }
 

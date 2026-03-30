@@ -1,7 +1,7 @@
 #pragma once
 
 #include "circular_index.hpp"
-#include "raw_storage.hpp"
+#include "raw_storage_union.hpp"
 
 #include <cstddef>
 #include <exception>
@@ -93,7 +93,7 @@ public:
     constexpr auto emplace_back(Args&&... args) noexcept -> T&
     {
         if (is_full()) [[unlikely]] { m_clear_and_terminate(); }
-        auto& elm = m_data.construct_at(m_end.to_size_t(), std::forward<Args>(args)...);
+        auto& elm = m_data.emplace_at(m_end.to_size_t(), std::forward<Args>(args)...);
         ++m_end;
         return elm;
     }
@@ -103,13 +103,26 @@ public:
     constexpr auto try_emplace_back(Args&&... args) noexcept -> std::optional<T&>
     {
         if (is_full()) [[unlikely]] { return std::nullopt; }
-        if (auto maybe_elm =
-                m_data.try_construct_at(m_end.to_size_t(), std::forward<Args>(args)...))
+        if (auto maybe_elm = m_data.try_emplace_at(m_end.to_size_t(), std::forward<Args>(args)...))
         {
             ++m_end;
             return maybe_elm;
         }
         return std::nullopt;
+    }
+
+    template <typename... Args>
+        requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+    constexpr auto force_emplace_back(Args&&... args) noexcept -> T&
+    {
+        if (is_full()) [[unlikely]] { m_clear_and_terminate(); }
+        try {
+            auto& elm = m_data.except_emplace_at(m_end.to_size_t(), std::forward<Args>(args)...);
+            ++m_end;
+            return elm;
+        } catch (...) {
+            m_clear_and_terminate();
+        }
     }
 
     constexpr auto pop_front() noexcept -> std::optional<T>
@@ -122,7 +135,7 @@ public:
 
     constexpr void clear() noexcept
     {
-        for (auto i = m_beg; i != m_end; ++i) { m_data.destroy_at(i.to_size_t()); }
+        for (auto i = m_beg; i != m_end; ++i) { m_data.delete_at(i.to_size_t()); }
         m_beg = index_type::zero();
         m_end = index_type::zero();
     }

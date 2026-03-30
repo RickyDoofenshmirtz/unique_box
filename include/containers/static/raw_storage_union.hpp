@@ -66,7 +66,7 @@ public:
 
     template <typename... Args>
         requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
-    constexpr auto except_emplace_at(const std::size_t i, Args&&... args) //
+    constexpr auto except_emplace_at(const std::size_t i, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T&
     {
         auto ptr = std::construct_at(data_ptr(i), std::forward<Args>(args)...);
@@ -76,8 +76,7 @@ public:
     constexpr void delete_at(const std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
 
 private:
-    union
-    {
+    union {
         T m_data[N];
     };
 };

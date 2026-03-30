@@ -14,14 +14,12 @@ public:
 
     constexpr auto data_ptr(const std::size_t i = 0) noexcept -> T*
     {
-        // NOLINTNEXTLINE
-        return std::launder(reinterpret_cast<T*>(m_data + (i * sizeof(T))));
+        return std::launder(reinterpret_cast<T*>(m_data + (i * sizeof(T)))); // NOLINT
     }
 
     constexpr auto data_ptr(const std::size_t i = 0) const noexcept -> const T*
     {
-        // NOLINTNEXTLINE
-        return std::launder(reinterpret_cast<const T*>(m_data + (i * sizeof(T))));
+        return std::launder(reinterpret_cast<const T*>(m_data + (i * sizeof(T)))); // NOLINT
     }
 
     constexpr auto operator[](const std::size_t i) noexcept -> T& { return *data_ptr(i); }
