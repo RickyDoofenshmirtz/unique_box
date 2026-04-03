@@ -1,116 +1,159 @@
-#include "memory/unique_handle.hpp"
-
-#include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <optional>
-#include <print>
 #include <type_traits>
 #include <utility>
 
 namespace {
-    template <typename T, typename... Args>
-    concept is_factory_constructible = requires(T t, Args&&... args) {
-        { T::construct(std::forward<Args>(args)...) } noexcept -> std::same_as<T>;
-    };
-
-    template <typename T, typename... Args>
-    concept is_checked_constructible = requires(T t, Args&&... args) {
+    namespace impl {
+        template <typename T, std::size_t N>
+        class storage
         {
-            T::try_construct(std::forward<Args>(args)...)
-        } noexcept -> std::same_as<std::optional<T>>;
-    };
+        public:
+            constexpr storage() noexcept {}
 
-    template <typename T, typename... Args>
-    concept is_force_constructible = requires(T t, Args&&... args) {
-        { T::force_construct(std::forward<Args>(args)...) } noexcept -> std::same_as<T>;
-    };
+            constexpr storage() noexcept
+                requires(
+                    std::is_trivially_default_constructible_v<T> && std::is_trivially_copyable_v<T>)
+                : m_data{}
+            {
+            }
 
-    static_assert(is_factory_constructible<unique_handle<int>>);
-    static_assert(is_checked_constructible<unique_handle<int>>);
-    static_assert(is_force_constructible<unique_handle<int>>);
+            constexpr storage(const storage&) = delete;
 
-    class handle_coordinate
-    {
-    public:
-        using UH = unique_handle<std::int64_t>;
+            constexpr storage(const storage&)
+                requires(std::is_trivially_default_constructible_v<T> &&
+                         std::is_trivially_copyable_v<T>)
+            = default;
 
-        handle_coordinate(std::int64_t x, std::int64_t y) noexcept
-            : m_x(UH::construct(x)), m_y(UH::construct(y))
-        {
-        }
+            constexpr storage(storage&&) noexcept = delete;
 
-        auto get() const noexcept -> std::pair<const UH&, const UH&> { return { m_x, m_y }; }
+            constexpr storage(storage&&) noexcept
+                requires(std::is_trivially_default_constructible_v<T> &&
+                         std::is_trivially_copyable_v<T>)
+            = default;
 
-        auto get_val() const noexcept -> std::pair<std::int64_t, std::int64_t>
-        {
-            return { *m_x, *m_y };
-        }
+            constexpr auto operator=(const storage&) -> storage& = delete;
 
-    private:
-        UH m_x;
-        UH m_y;
-    };
+            constexpr auto operator=(const storage&) -> storage&
+                requires(std::is_trivially_default_constructible_v<T> &&
+                         std::is_trivially_copyable_v<T>)
+            = default;
 
-    template <typename T, std::size_t N>
-    class raw_storage
-    {
-    public:
-        raw_storage() noexcept {}
+            constexpr auto operator=(storage&&) noexcept -> storage& = delete;
 
-        raw_storage(const raw_storage&) = delete;
-        raw_storage(raw_storage&&)      = delete;
+            constexpr auto operator=(storage&&) noexcept -> storage&
+                requires(std::is_trivially_default_constructible_v<T> &&
+                         std::is_trivially_copyable_v<T>)
+            = default;
 
-        auto operator=(const raw_storage&) -> raw_storage& = delete;
-        auto operator=(raw_storage&&) -> raw_storage&      = delete;
+            constexpr ~storage() noexcept {}
 
-        ~raw_storage() noexcept {}
+            constexpr ~storage() noexcept
+                requires(std::is_trivially_default_constructible_v<T> &&
+                         std::is_trivially_copyable_v<T>)
+            = default;
 
-        auto data_ptr(const std::size_t i = 0) noexcept -> T*
-        {
-            return static_cast<T*>(m_data) + i; // NOLINT
-        }
+            static constexpr auto construct() noexcept -> storage { return storage{}; }
 
-        auto data_ptr(const std::size_t i = 0) const noexcept -> const T*
-        {
-            return static_cast<const T*>(m_data) + i; // NOLINT
-        }
+            constexpr auto data_ptr(const std::size_t i = 0) noexcept -> T*
+            {
+                return static_cast<T*>(m_data) + i; // NOLINT
+            }
 
-        template <typename... Args>
-            requires(
-                std::is_nothrow_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
-        auto construct_at(const std::size_t i, Args&&... args) noexcept -> T&
-        {
-            auto ptr = construct_at(data_ptr(i), std::forward<Args>(args)...);
-            return *ptr;
-        }
+            constexpr auto data_ptr(const std::size_t i = 0) const noexcept -> const T*
+            {
+                return static_cast<const T*>(m_data) + i; // NOLINT
+            }
 
-        template <typename... Args>
-            requires(!std::is_constructible_v<T, Args...> && is_factory_constructible<T, Args...>)
-        auto construct_at(const std::size_t i, Args&&... args) noexcept -> T&
-        {
-            auto ptr = std::construct_at(data_ptr(i), T::construct(std::forward<Args>(args)...));
-            return *ptr;
-        }
+            constexpr auto operator[](const std::size_t i) noexcept -> T& { return *data_ptr(i); }
+            constexpr auto operator[](const std::size_t i) const noexcept -> const T&
+            { return *data_ptr(i); }
 
-        auto destroy_at(std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
+            template <typename... Args>
+                requires(
+                    std::is_nothrow_constructible_v<T, Args...> &&
+                    std::is_nothrow_destructible_v<T>)
+            constexpr auto emplace_at(const std::size_t i, Args&&... args) noexcept -> T&
+            { return except_emplace_at(i, std::forward<Args>(args)...); }
 
-    private:
-        union
-        {
-            T m_data[N];
+            template <typename... Args>
+                requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+            constexpr auto try_emplace_at(const std::size_t i, Args&&... args)
+                noexcept(std::is_nothrow_constructible_v<T, Args...>) -> std::optional<T&>
+            {
+                try {
+                    auto ptr = except_emplace_at(i, std::forward<Args>(args)...);
+                    return *ptr;
+                } catch (...) {
+                    return std::nullopt;
+                }
+            }
+
+            template <typename... Args>
+                requires(std::is_constructible_v<T, Args...> && std::is_nothrow_destructible_v<T>)
+            constexpr auto except_emplace_at(const std::size_t i, Args&&... args)
+                noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T&
+            {
+                auto ptr = std::construct_at(data_ptr(i), std::forward<Args>(args)...);
+                return *ptr;
+            }
+
+            void delete_at(const std::size_t i) noexcept { std::destroy_at(data_ptr(i)); }
+
+        private:
+            union {
+                T m_data[N];
+            };
         };
-    };
 
-    void test_storage() noexcept
+        template <typename T, std::size_t N>
+        class queue
+        {
+        public:
+            constexpr auto is_empty() const noexcept -> bool { return m_beg == m_end; }
+
+            constexpr auto get_front() noexcept -> std::optional<T&>
+            {
+                if (is_empty()) { return std::nullopt; }
+                return m_data[m_beg];
+            }
+
+            constexpr auto get_front() const noexcept -> std::optional<const T&>
+            {
+                if (is_empty()) { return std::nullopt; }
+                return m_data[m_beg];
+            }
+
+            template <typename... Args>
+                requires(
+                    std::is_nothrow_constructible_v<T, Args...> &&
+                    std::is_nothrow_destructible_v<T>)
+            constexpr auto emplace_back(Args&&... args) noexcept -> T&
+            {
+                auto& elm = m_data.emplace_at(m_end, std::forward<Args>(args)...);
+                return elm;
+            }
+
+        private:
+            storage<T, N> m_data;
+            std::size_t m_beg{};
+            std::size_t m_end{};
+        };
+    } // namespace impl
+
+    constexpr auto get_data() noexcept
     {
-        raw_storage<unique_handle<int>, 5> data;
-        auto& han = data.construct_at(0, 7);
-        auto val  = *han;
-        std::println("{}", val);
+        auto q = impl::queue<int, 2>{};
+        q.emplace_back(8);
+        q.emplace_back(2);
+        return q;
     }
 
-    [[maybe_unused]] void func() { test_storage(); }
-
+    [[maybe_unused]]
+    void func() noexcept
+    {
+        [[maybe_unused]] constexpr auto q   = get_data();
+        [[maybe_unused]] constexpr auto mbf = q.get_front();
+    }
 } // namespace
